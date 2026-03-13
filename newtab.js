@@ -65,7 +65,6 @@
         fit:     result.wallpaperFit || 'cover',
         tile:    !!result.wallpaperTile,
       };
-      renderBg();
 
       if (state.tile) {
         document.getElementById('fit-tile').checked = true;
@@ -75,6 +74,7 @@
         });
       }
     }
+    renderBg();
   });
 
   // ── Settings toggle ────────────────────────────────────────────────────────
