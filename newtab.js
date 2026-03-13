@@ -85,7 +85,7 @@
   };
 
   // ── State ─────────────────────────────────────────────────────────────────
-  let state = { fit: 'cover', tile: false, clockVisible: true, clockColor: 'white', clockCustomHex: '#6366f1', bgColor: 'midnight', bgCustomHex: '#111827' };
+  let state = { fit: 'cover', tile: false, clockVisible: true, clockColor: 'white', clockCustomHex: '#6366f1', bgColor: 'midnight', bgCustomHex: '#111827', bgColorSet: false };
   let currentObjectUrl = null;
   let hasWallpaper = false;
 
@@ -103,7 +103,7 @@
 
   // ── Clock settings ─────────────────────────────────────────────────────────
   function applyClockVisibility() {
-    if (hasWallpaper && state.clockVisible) {
+    if ((hasWallpaper || state.bgColorSet) && state.clockVisible) {
       clockContainer.classList.remove('hidden');
     } else {
       clockContainer.classList.add('hidden');
@@ -139,7 +139,7 @@
       if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
       bg.style.backgroundImage = '';
       bg.classList.remove('loaded');
-      setupPrompt.classList.remove('hidden');
+      if (!state.bgColorSet) setupPrompt.classList.remove('hidden');
       hasWallpaper = false;
       applyClockVisibility();
       clearBtn.disabled = true;
@@ -179,13 +179,14 @@
       clockCustomHex: state.clockCustomHex,
       bgColor: state.bgColor,
       bgCustomHex: state.bgCustomHex,
+      bgColorSet: state.bgColorSet,
     });
   }
 
   // ── Load on startup ────────────────────────────────────────────────────────
   async function init() {
     const stored = await new Promise(resolve =>
-      chrome.storage.local.get(['wallpaperFit', 'wallpaperTile', 'wallpaperDataUrl', 'clockVisible', 'clockColor', 'clockCustomHex', 'bgColor', 'bgCustomHex'], resolve)
+      chrome.storage.local.get(['wallpaperFit', 'wallpaperTile', 'wallpaperDataUrl', 'clockVisible', 'clockColor', 'clockCustomHex', 'bgColor', 'bgCustomHex', 'bgColorSet'], resolve)
     );
 
     state.fit          = stored.wallpaperFit  || 'cover';
@@ -195,6 +196,7 @@
     state.clockCustomHex = stored.clockCustomHex || '#6366f1';
     state.bgColor        = stored.bgColor      || 'midnight';
     state.bgCustomHex    = stored.bgCustomHex  || '#111827';
+    state.bgColorSet     = !!stored.bgColorSet;
     clockCustomInput.value = state.clockCustomHex;
     bgCustomInput.value    = state.bgCustomHex;
     applyClockColor();
@@ -271,16 +273,22 @@
 
   // ── Background color ──────────────────────────────────────────────────────
   bgSwatches.forEach(swatch => swatch.addEventListener('click', () => {
-    state.bgColor = swatch.dataset.color;
+    state.bgColor    = swatch.dataset.color;
+    state.bgColorSet = true;
     if (state.bgColor === 'custom') bgCustomInput.click();
     applyBgColor();
+    setupPrompt.classList.add('hidden');
+    applyClockVisibility();
     persistSettings();
   }));
 
   bgCustomInput.addEventListener('input', () => {
     state.bgColor     = 'custom';
     state.bgCustomHex = bgCustomInput.value;
+    state.bgColorSet  = true;
     applyBgColor();
+    setupPrompt.classList.add('hidden');
+    applyClockVisibility();
     persistSettings();
   });
 
