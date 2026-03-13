@@ -23,12 +23,47 @@
   updateClock();
   setInterval(updateClock, 1000);
 
+  // ── IndexedDB ─────────────────────────────────────────────────────────────
+  // Blobs stored here avoid base64 encoding and JSON serialization overhead.
+  const dbReady = new Promise((resolve, reject) => {
+    const req = indexedDB.open('wallpaper-db', 1);
+    req.onupgradeneeded = (e) => e.target.result.createObjectStore('images');
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror   = (e) => reject(e.target.error);
+  });
+
+  function idbGet() {
+    return dbReady.then(db => new Promise((resolve, reject) => {
+      const req = db.transaction('images').objectStore('images').get('wallpaper');
+      req.onsuccess = (e) => resolve(e.target.result ?? null);
+      req.onerror   = (e) => reject(e.target.error);
+    }));
+  }
+
+  function idbPut(blob) {
+    return dbReady.then(db => new Promise((resolve, reject) => {
+      const req = db.transaction('images', 'readwrite').objectStore('images').put(blob, 'wallpaper');
+      req.onsuccess = () => resolve();
+      req.onerror   = (e) => reject(e.target.error);
+    }));
+  }
+
+  function idbDelete() {
+    return dbReady.then(db => new Promise((resolve, reject) => {
+      const req = db.transaction('images', 'readwrite').objectStore('images').delete('wallpaper');
+      req.onsuccess = () => resolve();
+      req.onerror   = (e) => reject(e.target.error);
+    }));
+  }
+
   // ── State ─────────────────────────────────────────────────────────────────
-  let state = { dataUrl: null, fit: 'cover', tile: false };
+  let state = { fit: 'cover', tile: false };
+  let currentObjectUrl = null;
 
   // ── Background rendering ───────────────────────────────────────────────────
-  function renderBg() {
-    if (!state.dataUrl) {
+  function renderBg(objectUrl) {
+    if (!objectUrl) {
+      if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
       bg.style.backgroundImage = '';
       bg.classList.remove('loaded');
       setupPrompt.classList.remove('hidden');
@@ -36,7 +71,9 @@
       clearBtn.disabled = true;
       return;
     }
-    bg.style.backgroundImage  = `url(${state.dataUrl})`;
+    if (currentObjectUrl && currentObjectUrl !== objectUrl) URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = objectUrl;
+    bg.style.backgroundImage  = `url(${objectUrl})`;
     bg.style.backgroundSize   = state.fit;
     bg.style.backgroundRepeat = state.tile ? 'repeat' : 'no-repeat';
     bg.classList.add('loaded');
@@ -45,37 +82,55 @@
     clearBtn.disabled = false;
   }
 
-  // ── Persist & render ───────────────────────────────────────────────────────
-  function persist() {
-    chrome.storage.local.set({
-      wallpaperDataUrl: state.dataUrl,
-      wallpaperFit:     state.fit,
-      wallpaperTile:    state.tile,
-    }, () => {
-      if (chrome.runtime.lastError) showToast('Error saving: ' + chrome.runtime.lastError.message);
-    });
-    renderBg();
+  function applyFit() {
+    bg.style.backgroundSize   = state.fit;
+    bg.style.backgroundRepeat = state.tile ? 'repeat' : 'no-repeat';
   }
 
-  // ── Load saved wallpaper on startup ───────────────────────────────────────
-  chrome.storage.local.get(['wallpaperDataUrl', 'wallpaperFit', 'wallpaperTile'], (result) => {
-    if (result.wallpaperDataUrl) {
-      state = {
-        dataUrl: result.wallpaperDataUrl,
-        fit:     result.wallpaperFit || 'cover',
-        tile:    !!result.wallpaperTile,
-      };
-
-      if (state.tile) {
-        document.getElementById('fit-tile').checked = true;
-      } else {
-        fitInputs.forEach((r) => {
-          if (r.id !== 'fit-tile' && r.value === state.fit) r.checked = true;
-        });
-      }
+  function syncFitInputs() {
+    if (state.tile) {
+      document.getElementById('fit-tile').checked = true;
+    } else {
+      fitInputs.forEach((r) => { if (r.id !== 'fit-tile' && r.value === state.fit) r.checked = true; });
     }
-    renderBg();
-  });
+  }
+
+  function persistSettings() {
+    chrome.storage.local.set({ wallpaperFit: state.fit, wallpaperTile: state.tile });
+  }
+
+  // ── Load on startup ────────────────────────────────────────────────────────
+  async function init() {
+    const stored = await new Promise(resolve =>
+      chrome.storage.local.get(['wallpaperFit', 'wallpaperTile', 'wallpaperDataUrl'], resolve)
+    );
+
+    state.fit  = stored.wallpaperFit  || 'cover';
+    state.tile = !!stored.wallpaperTile;
+
+    let blob = null;
+
+    if (stored.wallpaperDataUrl) {
+      // One-time migration: base64 in chrome.storage.local → Blob in IndexedDB
+      try {
+        const res = await fetch(stored.wallpaperDataUrl);
+        blob = await res.blob();
+        await idbPut(blob);
+        chrome.storage.local.remove('wallpaperDataUrl');
+      } catch { blob = null; }
+    } else {
+      blob = await idbGet().catch(() => null);
+    }
+
+    if (blob) {
+      syncFitInputs();
+      renderBg(URL.createObjectURL(blob));
+    } else {
+      renderBg(null);
+    }
+  }
+
+  init();
 
   // ── Settings toggle ────────────────────────────────────────────────────────
   settingsBtn.addEventListener('click', () => {
@@ -93,13 +148,10 @@
       return;
     }
     fileNameEl.textContent = `${file.name} · ${formatBytes(file.size)}`;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      state.dataUrl = e.target.result;
-      persist();
-    };
-    reader.onerror = () => showToast('Failed to read file.');
-    reader.readAsDataURL(file);
+    // Store the raw Blob — no FileReader / base64 conversion needed
+    idbPut(file)
+      .then(() => { persistSettings(); renderBg(URL.createObjectURL(file)); })
+      .catch(() => showToast('Failed to save image.'));
   }
 
   fileInput.addEventListener('change', () => {
@@ -117,21 +169,24 @@
 
   // ── Fit change ─────────────────────────────────────────────────────────────
   fitInputs.forEach((r) => r.addEventListener('change', () => {
-    if (!state.dataUrl) return;
+    if (!currentObjectUrl) return;
     state.tile = r.id === 'fit-tile';
     state.fit  = state.tile ? 'auto' : r.value;
-    persist();
+    persistSettings();
+    applyFit();
   }));
 
   // ── Clear ──────────────────────────────────────────────────────────────────
   clearBtn.addEventListener('click', () => {
-    chrome.storage.local.remove(['wallpaperDataUrl', 'wallpaperFit', 'wallpaperTile'], () => {
-      if (chrome.runtime.lastError) { showToast('Error removing wallpaper.'); return; }
-      state = { dataUrl: null, fit: 'cover', tile: false };
-      renderBg();
-      fileNameEl.textContent = '';
-      document.getElementById('fit-cover').checked = true;
-    });
+    idbDelete()
+      .then(() => {
+        chrome.storage.local.remove(['wallpaperFit', 'wallpaperTile']);
+        state = { fit: 'cover', tile: false };
+        renderBg(null);
+        fileNameEl.textContent = '';
+        document.getElementById('fit-cover').checked = true;
+      })
+      .catch(() => showToast('Error removing wallpaper.'));
   });
 
   // ── Toast ──────────────────────────────────────────────────────────────────
