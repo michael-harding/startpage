@@ -141,6 +141,16 @@
     document.body.classList.add('settings-open');
   });
 
+  document.addEventListener('click', (e) => {
+    if (
+      document.body.classList.contains('settings-open') &&
+      !document.getElementById('settings-panel').contains(e.target) &&
+      !settingsBtn.contains(e.target)
+    ) {
+      document.body.classList.remove('settings-open');
+    }
+  });
+
   // ── File selection ─────────────────────────────────────────────────────────
   function handleFile(file) {
     if (!file || !file.type.startsWith('image/')) {
