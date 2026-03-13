@@ -15,6 +15,8 @@
   const clockToggle     = document.getElementById('clock-toggle');
   const clockSwatches   = document.querySelectorAll('#clock-color-swatches .color-swatch');
   const clockCustomInput = document.getElementById('clock-color-custom');
+  const bgSwatches      = document.querySelectorAll('#bg-color-swatches .color-swatch');
+  const bgCustomInput   = document.getElementById('bg-color-custom');
   const toast           = document.getElementById('toast');
 
   // ── Clock ─────────────────────────────────────────────────────────────────
@@ -59,6 +61,17 @@
     }));
   }
 
+  // ── Background color presets ──────────────────────────────────────────────
+  const BG_COLORS = {
+    midnight: '#111827',
+    black:    '#000000',
+    white:    '#ffffff',
+    slate:    '#1e293b',
+    navy:     '#0a0e2e',
+    forest:   '#0a1f0f',
+    rose:     '#2a0a0f',
+  };
+
   // ── Clock color presets ───────────────────────────────────────────────────
   const CLOCK_COLORS = {
     white:  { bg: 'rgba(255,255,255,0.08)',  border: 'rgba(255,255,255,0.18)' },
@@ -71,9 +84,21 @@
   };
 
   // ── State ─────────────────────────────────────────────────────────────────
-  let state = { fit: 'cover', tile: false, clockVisible: true, clockColor: 'white', clockCustomHex: '#6366f1' };
+  let state = { fit: 'cover', tile: false, clockVisible: true, clockColor: 'white', clockCustomHex: '#6366f1', bgColor: 'midnight', bgCustomHex: '#111827' };
   let currentObjectUrl = null;
   let hasWallpaper = false;
+
+  // ── Background color ──────────────────────────────────────────────────────
+  function applyBgColor() {
+    const color = state.bgColor === 'custom'
+      ? state.bgCustomHex
+      : (BG_COLORS[state.bgColor] || '#111827');
+    document.body.style.backgroundColor = color;
+    if (state.bgColor === 'custom') {
+      bgCustomInput.closest('.custom-swatch').style.background = state.bgCustomHex;
+    }
+    bgSwatches.forEach(s => s.classList.toggle('active', s.dataset.color === state.bgColor));
+  }
 
   // ── Clock settings ─────────────────────────────────────────────────────────
   function applyClockVisibility() {
@@ -151,13 +176,15 @@
       clockVisible: state.clockVisible,
       clockColor: state.clockColor,
       clockCustomHex: state.clockCustomHex,
+      bgColor: state.bgColor,
+      bgCustomHex: state.bgCustomHex,
     });
   }
 
   // ── Load on startup ────────────────────────────────────────────────────────
   async function init() {
     const stored = await new Promise(resolve =>
-      chrome.storage.local.get(['wallpaperFit', 'wallpaperTile', 'wallpaperDataUrl', 'clockVisible', 'clockColor', 'clockCustomHex'], resolve)
+      chrome.storage.local.get(['wallpaperFit', 'wallpaperTile', 'wallpaperDataUrl', 'clockVisible', 'clockColor', 'clockCustomHex', 'bgColor', 'bgCustomHex'], resolve)
     );
 
     state.fit          = stored.wallpaperFit  || 'cover';
@@ -165,8 +192,12 @@
     state.clockVisible   = stored.clockVisible !== false; // default true
     state.clockColor     = stored.clockColor   || 'white';
     state.clockCustomHex = stored.clockCustomHex || '#6366f1';
+    state.bgColor        = stored.bgColor      || 'midnight';
+    state.bgCustomHex    = stored.bgCustomHex  || '#111827';
     clockCustomInput.value = state.clockCustomHex;
+    bgCustomInput.value    = state.bgCustomHex;
     applyClockColor();
+    applyBgColor();
 
     let blob = null;
 
@@ -235,6 +266,21 @@
     dropZone.classList.remove('drag-over');
     const file = e.dataTransfer?.files?.[0];
     if (file) handleFile(file);
+  });
+
+  // ── Background color ──────────────────────────────────────────────────────
+  bgSwatches.forEach(swatch => swatch.addEventListener('click', () => {
+    state.bgColor = swatch.dataset.color;
+    if (state.bgColor === 'custom') bgCustomInput.click();
+    applyBgColor();
+    persistSettings();
+  }));
+
+  bgCustomInput.addEventListener('input', () => {
+    state.bgColor     = 'custom';
+    state.bgCustomHex = bgCustomInput.value;
+    applyBgColor();
+    persistSettings();
   });
 
   // ── Clock toggle ───────────────────────────────────────────────────────────
