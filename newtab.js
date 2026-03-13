@@ -65,11 +65,12 @@
   const BG_COLORS = {
     midnight: '#111827',
     black:    '#000000',
-    white:    '#ffffff',
-    slate:    '#1e293b',
-    navy:     '#0a0e2e',
-    forest:   '#0a1f0f',
-    rose:     '#2a0a0f',
+    white:    '#f8fafc',
+    blue:     '#1d4ed8',
+    purple:   '#7c3aed',
+    teal:     '#0891b2',
+    rose:     '#e11d48',
+    amber:    '#d97706',
   };
 
   // ── Clock color presets ───────────────────────────────────────────────────
