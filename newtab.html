@@ -37,7 +37,7 @@
       opacity: 1;
     }
 
-    /* ── Setup prompt (shown when no image is set) ── */
+    /* ── Setup prompt ── */
     #setup-prompt {
       position: fixed;
       inset: 0;
@@ -47,11 +47,15 @@
       justify-content: center;
       gap: 1.25rem;
       color: rgba(255, 255, 255, 0.75);
+      transition: opacity 0.2s;
     }
 
-    #setup-prompt svg {
-      opacity: 0.4;
+    body.settings-open #setup-prompt {
+      opacity: 0;
+      pointer-events: none;
     }
+
+    #setup-prompt svg { opacity: 0.4; }
 
     #setup-prompt h2 {
       font-size: 1.25rem;
@@ -86,8 +90,8 @@
       color: white;
       pointer-events: none;
       user-select: none;
+      transition: opacity 0.2s, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
-      /* Glass card */
       background: rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(5px) saturate(1.4);
       -webkit-backdrop-filter: blur(5px) saturate(1.4);
@@ -97,6 +101,10 @@
       box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.25),
         inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+
+    body.settings-open #clock-container {
+      opacity: 0;
     }
 
     #clock {
@@ -115,7 +123,7 @@
       opacity: 0.75;
     }
 
-    /* ── Settings button ── */
+    /* ── Toggle button ── */
     #settings-btn {
       position: fixed;
       bottom: 1.5rem;
@@ -126,31 +134,292 @@
       border: 1px solid rgba(255, 255, 255, 0.2);
       background: rgba(0, 0, 0, 0.25);
       backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       color: rgba(255, 255, 255, 0.7);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.2s, color 0.2s, opacity 0.2s;
-      opacity: 0.5;
+      transition: background 0.2s, color 0.2s, opacity 0.2s, border-color 0.2s;
+      opacity: 0.55;
+      z-index: 200;
     }
 
     #settings-btn:hover {
-      background: rgba(0, 0, 0, 0.45);
+      background: rgba(0, 0, 0, 0.5);
       color: white;
       opacity: 1;
     }
 
-    /* ── Utilities ── */
-    .hidden {
-      display: none !important;
+    body.settings-open #settings-btn {
+      opacity: 1;
+      border-color: rgba(255, 255, 255, 0.35);
+      background: rgba(0, 0, 0, 0.45);
+      color: white;
     }
+
+    /* Swap icons via visibility */
+    #settings-btn .icon-gear  { display: block; }
+    #settings-btn .icon-close { display: none;  }
+
+    body.settings-open #settings-btn .icon-gear  { display: none;  }
+    body.settings-open #settings-btn .icon-close { display: block; }
+
+    /* ── Settings panel ── */
+    #settings-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100%;
+      width: 340px;
+      max-width: 90vw;
+      z-index: 100;
+
+      background: rgba(15, 17, 23, 0.6);
+      backdrop-filter: blur(28px) saturate(1.6);
+      -webkit-backdrop-filter: blur(28px) saturate(1.6);
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: -8px 0 40px rgba(0, 0, 0, 0.35);
+
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      color: white;
+    }
+
+    body.settings-open #settings-panel {
+      transform: translateX(0);
+    }
+
+    .panel-header {
+      padding: 1.75rem 1.5rem 1rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.4);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      flex-shrink: 0;
+    }
+
+    .panel-body {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      flex: 1;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.35);
+      margin-bottom: 0.6rem;
+    }
+
+    /* ── Drop zone ── */
+    #drop-zone {
+      border: 1.5px dashed rgba(255, 255, 255, 0.18);
+      border-radius: 10px;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      color: rgba(255, 255, 255, 0.5);
+      position: relative;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    #drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    #drop-zone:hover,
+    #drop-zone.drag-over {
+      border-color: rgba(255, 255, 255, 0.45);
+      background: rgba(255, 255, 255, 0.05);
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    #drop-zone svg { margin-bottom: 0.4rem; }
+
+    #drop-zone strong {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    #file-name {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.35);
+      min-height: 1em;
+      text-align: center;
+      word-break: break-all;
+    }
+
+    /* ── Fit grid ── */
+    .fit-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.5rem;
+    }
+
+    .fit-option { position: relative; }
+
+    .fit-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .fit-option label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.5rem 0.25rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      font-size: 0.65rem;
+      color: rgba(255, 255, 255, 0.4);
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      user-select: none;
+    }
+
+    .fit-option input:checked + label {
+      border-color: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .fit-option label:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* tiny visual glyphs */
+    .fit-icon {
+      width: 28px;
+      height: 20px;
+      border-radius: 2px;
+      border: 1px solid currentColor;
+      position: relative;
+      overflow: hidden;
+      opacity: 0.7;
+    }
+
+    .fit-icon::after {
+      content: '';
+      position: absolute;
+      background: currentColor;
+      opacity: 0.45;
+    }
+
+    .fit-icon.cover::after  { inset: -3px; }
+    .fit-icon.contain::after { top: 2px; bottom: 2px; left: -2px; right: -2px; }
+    .fit-icon.stretch::after { inset: 0; }
+    .fit-icon.center::after  { top: 4px; bottom: 4px; left: 5px; right: 5px; }
+    .fit-icon.tile {
+      background-image:
+        repeating-linear-gradient(currentColor 0, currentColor 1px, transparent 1px, transparent 7px),
+        repeating-linear-gradient(90deg, currentColor 0, currentColor 1px, transparent 1px, transparent 7px);
+      background-size: 7px 7px;
+      opacity: 0.2;
+    }
+    .fit-icon.tile::after { display: none; }
+
+    /* ── Action buttons ── */
+    .btn-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .panel-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+      width: 100%;
+      color: white;
+    }
+
+    .panel-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    #save-btn {
+      background: rgba(108, 99, 255, 0.75);
+      border-color: rgba(108, 99, 255, 0.5);
+    }
+    #save-btn:not(:disabled):hover {
+      background: rgba(108, 99, 255, 0.95);
+    }
+
+    #clear-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: rgba(239, 68, 68, 0.85);
+    }
+    #clear-btn:not(:disabled):hover {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 5rem;
+      right: 1.5rem;
+      background: rgba(30, 32, 44, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 0.55rem 1rem;
+      font-size: 0.825rem;
+      color: white;
+      z-index: 300;
+      opacity: 0;
+      transform: translateY(0.5rem);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+
+    #toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Utilities ── */
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
   <div id="bg"></div>
 
+  <!-- Setup prompt (no wallpaper yet) -->
   <div id="setup-prompt">
     <svg width="56" height="56" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
@@ -162,13 +431,76 @@
     <button id="setup-btn">Choose an image</button>
   </div>
 
+  <!-- Clock -->
   <div id="clock-container" class="hidden">
     <div id="clock"></div>
     <div id="date"></div>
   </div>
 
-  <button id="settings-btn" title="Wallpaper settings" aria-label="Open wallpaper settings">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+  <!-- Settings panel (slides in from right) -->
+  <aside id="settings-panel" aria-label="Wallpaper settings">
+    <div class="panel-header">Wallpaper Settings</div>
+    <div class="panel-body">
+
+      <div>
+        <div class="section-label">Image</div>
+        <div id="drop-zone">
+          <input type="file" id="file-input" accept="image/*">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <div><strong>Click to choose</strong> or drag &amp; drop</div>
+          <div style="font-size:0.75rem; margin-top:0.2rem; opacity:0.6">JPEG · PNG · WebP · AVIF · GIF</div>
+        </div>
+        <div id="file-name"></div>
+      </div>
+
+      <div>
+        <div class="section-label">Display mode</div>
+        <div class="fit-grid">
+          <div class="fit-option">
+            <input type="radio" name="fit" id="fit-cover" value="cover" checked>
+            <label for="fit-cover"><div class="fit-icon cover"></div>Cover</label>
+          </div>
+          <div class="fit-option">
+            <input type="radio" name="fit" id="fit-contain" value="contain">
+            <label for="fit-contain"><div class="fit-icon contain"></div>Contain</label>
+          </div>
+          <div class="fit-option">
+            <input type="radio" name="fit" id="fit-stretch" value="100% 100%">
+            <label for="fit-stretch"><div class="fit-icon stretch"></div>Stretch</label>
+          </div>
+          <div class="fit-option">
+            <input type="radio" name="fit" id="fit-center" value="auto">
+            <label for="fit-center"><div class="fit-icon center"></div>Center</label>
+          </div>
+          <div class="fit-option">
+            <input type="radio" name="fit" id="fit-tile" value="auto">
+            <label for="fit-tile"><div class="fit-icon tile"></div>Tile</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="panel-btn" id="clear-btn" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          </svg>
+          Remove wallpaper
+        </button>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Toggle button -->
+  <button id="settings-btn" aria-label="Toggle settings">
+    <svg class="icon-gear" width="18" height="18" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="3"/>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06
@@ -181,7 +513,14 @@
                l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09
                a1.65 1.65 0 0 0-1.51 1z"/>
     </svg>
+    <svg class="icon-close" width="18" height="18" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/>
+      <line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
   </button>
+
+  <div id="toast"></div>
 
   <script src="newtab.js"></script>
 </body>
