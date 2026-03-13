@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tab Wallpaper — Settings</title>
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --text: #e2e4ed;
+      --text-muted: #7b7f96;
+      --accent: #6c63ff;
+      --accent-hover: #7d75ff;
+      --danger: #ef4444;
+      --danger-hover: #f87171;
+      --radius: 12px;
+    }
+
+    html, body {
+      min-height: 100%;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ── */
+    .page {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+    }
+
+    header svg {
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    /* ── Preview ── */
+    #preview-wrap {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #0a0c12;
+      border: 1px solid var(--border);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    #preview-wrap.has-image {
+      border-color: transparent;
+    }
+
+    #preview-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    #preview-img.visible {
+      display: block;
+    }
+
+    #preview-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    /* ── File drop zone ── */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      color: var(--text-muted);
+      position: relative;
+    }
+
+    #drop-zone:hover,
+    #drop-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(108, 99, 255, 0.06);
+      color: var(--text);
+    }
+
+    #drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    #drop-zone svg {
+      margin-bottom: 0.5rem;
+    }
+
+    #drop-zone p {
+      font-size: 0.9rem;
+    }
+
+    #drop-zone span {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    #file-name {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      min-height: 1.2em;
+    }
+
+    /* ── Fit selector ── */
+    .fit-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 0.625rem;
+    }
+
+    .fit-option {
+      position: relative;
+    }
+
+    .fit-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .fit-option label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.75rem 0.5rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      user-select: none;
+    }
+
+    .fit-option input:checked + label {
+      border-color: var(--accent);
+      background: rgba(108, 99, 255, 0.1);
+      color: var(--text);
+    }
+
+    .fit-option label:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .fit-icon {
+      width: 40px;
+      height: 28px;
+      border-radius: 3px;
+      border: 1px solid currentColor;
+      position: relative;
+      overflow: hidden;
+      opacity: 0.6;
+    }
+
+    .fit-icon::after {
+      content: '';
+      position: absolute;
+      background: currentColor;
+      opacity: 0.5;
+    }
+
+    /* cover: image overflows */
+    .fit-icon.cover::after {
+      inset: -4px;
+    }
+    /* contain: letterboxed */
+    .fit-icon.contain::after {
+      top: 3px; bottom: 3px; left: -2px; right: -2px;
+    }
+    /* stretch */
+    .fit-icon.stretch::after {
+      inset: 0;
+    }
+    /* center */
+    .fit-icon.center::after {
+      top: 6px; bottom: 6px; left: 8px; right: 8px;
+    }
+    /* tile */
+    .fit-icon.tile {
+      background-image: repeating-linear-gradient(
+        currentColor 0, currentColor 1px,
+        transparent 1px, transparent 10px
+      ),
+      repeating-linear-gradient(
+        90deg, currentColor 0, currentColor 1px,
+        transparent 1px, transparent 10px
+      );
+      background-size: 10px 10px;
+      opacity: 0.25;
+    }
+    .fit-icon.tile::after { display: none; }
+
+    /* ── Buttons ── */
+    .btn-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.25rem;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #save-btn {
+      background: var(--accent);
+      color: white;
+    }
+    #save-btn:not(:disabled):hover {
+      background: var(--accent-hover);
+    }
+
+    #clear-btn {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--danger);
+    }
+    #clear-btn:not(:disabled):hover {
+      border-color: var(--danger);
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    /* ── Status toast ── */
+    #status {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(2rem);
+      background: #2a2d3a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 1.25rem;
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #status.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #status.success { border-color: #22c55e; color: #86efac; }
+    #status.error   { border-color: var(--danger); color: #fca5a5; }
+  </style>
+</head>
+<body>
+
+  <div class="page">
+
+    <header>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      <h1>Tab Wallpaper</h1>
+    </header>
+
+    <!-- Preview -->
+    <div class="card">
+      <div class="card-title">Preview</div>
+      <div id="preview-wrap">
+        <img id="preview-img" alt="Wallpaper preview">
+        <div id="preview-placeholder">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <span>No wallpaper set</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image picker -->
+    <div class="card">
+      <div class="card-title">Image</div>
+      <div id="drop-zone">
+        <input type="file" id="file-input" accept="image/*">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p><span>Click to choose</span> or drag &amp; drop an image</p>
+        <p style="font-size:0.8rem; margin-top:0.25rem">JPEG, PNG, WebP, AVIF, GIF supported</p>
+      </div>
+      <div id="file-name"></div>
+    </div>
+
+    <!-- Fit mode -->
+    <div class="card">
+      <div class="card-title">Display mode</div>
+      <div class="fit-grid">
+
+        <div class="fit-option">
+          <input type="radio" name="fit" id="fit-cover" value="cover" checked>
+          <label for="fit-cover">
+            <div class="fit-icon cover"></div>
+            Cover
+          </label>
+        </div>
+
+        <div class="fit-option">
+          <input type="radio" name="fit" id="fit-contain" value="contain">
+          <label for="fit-contain">
+            <div class="fit-icon contain"></div>
+            Contain
+          </label>
+        </div>
+
+        <div class="fit-option">
+          <input type="radio" name="fit" id="fit-stretch" value="100% 100%">
+          <label for="fit-stretch">
+            <div class="fit-icon stretch"></div>
+            Stretch
+          </label>
+        </div>
+
+        <div class="fit-option">
+          <input type="radio" name="fit" id="fit-center" value="auto">
+          <label for="fit-center">
+            <div class="fit-icon center"></div>
+            Center
+          </label>
+        </div>
+
+        <div class="fit-option">
+          <input type="radio" name="fit" id="fit-tile" value="auto">
+          <label for="fit-tile" id="fit-tile-label">
+            <div class="fit-icon tile"></div>
+            Tile
+          </label>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="btn-row">
+      <button id="save-btn" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        Apply wallpaper
+      </button>
+      <button id="clear-btn" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+        </svg>
+        Remove wallpaper
+      </button>
+    </div>
+
+  </div>
+
+  <div id="status"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>
