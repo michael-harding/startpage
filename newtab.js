@@ -1,18 +1,21 @@
 (() => {
   // ── Elements ──────────────────────────────────────────────────────────────
-  const bg             = document.getElementById('bg');
-  const clockEl        = document.getElementById('clock');
-  const dateEl         = document.getElementById('date');
-  const clockContainer = document.getElementById('clock-container');
-  const setupPrompt    = document.getElementById('setup-prompt');
-  const setupBtn       = document.getElementById('setup-btn');
-  const settingsBtn    = document.getElementById('settings-btn');
-  const fileInput      = document.getElementById('file-input');
-  const dropZone       = document.getElementById('drop-zone');
-  const fileNameEl     = document.getElementById('file-name');
-  const clearBtn       = document.getElementById('clear-btn');
-  const fitInputs      = document.querySelectorAll('input[name="fit"]');
-  const toast          = document.getElementById('toast');
+  const bg              = document.getElementById('bg');
+  const clockEl         = document.getElementById('clock');
+  const dateEl          = document.getElementById('date');
+  const clockContainer  = document.getElementById('clock-container');
+  const setupPrompt     = document.getElementById('setup-prompt');
+  const setupBtn        = document.getElementById('setup-btn');
+  const settingsBtn     = document.getElementById('settings-btn');
+  const fileInput       = document.getElementById('file-input');
+  const dropZone        = document.getElementById('drop-zone');
+  const fileNameEl      = document.getElementById('file-name');
+  const clearBtn        = document.getElementById('clear-btn');
+  const fitInputs       = document.querySelectorAll('input[name="fit"]');
+  const clockToggle     = document.getElementById('clock-toggle');
+  const clockSwatches   = document.querySelectorAll('#clock-color-swatches .color-swatch');
+  const clockCustomInput = document.getElementById('clock-color-custom');
+  const toast           = document.getElementById('toast');
 
   // ── Clock ─────────────────────────────────────────────────────────────────
   function updateClock() {
@@ -56,9 +59,53 @@
     }));
   }
 
+  // ── Clock color presets ───────────────────────────────────────────────────
+  const CLOCK_COLORS = {
+    white:  { bg: 'rgba(255,255,255,0.08)',  border: 'rgba(255,255,255,0.18)' },
+    black:  { bg: 'rgba(0,0,0,0.45)',        border: 'rgba(255,255,255,0.12)' },
+    blue:   { bg: 'rgba(59,130,246,0.18)',   border: 'rgba(59,130,246,0.4)'   },
+    purple: { bg: 'rgba(139,92,246,0.18)',   border: 'rgba(139,92,246,0.4)'   },
+    rose:   { bg: 'rgba(244,63,94,0.15)',    border: 'rgba(244,63,94,0.4)'    },
+    amber:  { bg: 'rgba(245,158,11,0.15)',   border: 'rgba(245,158,11,0.4)'   },
+    green:  { bg: 'rgba(34,197,94,0.15)',    border: 'rgba(34,197,94,0.4)'    },
+  };
+
   // ── State ─────────────────────────────────────────────────────────────────
-  let state = { fit: 'cover', tile: false };
+  let state = { fit: 'cover', tile: false, clockVisible: true, clockColor: 'white', clockCustomHex: '#6366f1' };
   let currentObjectUrl = null;
+  let hasWallpaper = false;
+
+  // ── Clock settings ─────────────────────────────────────────────────────────
+  function applyClockVisibility() {
+    if (hasWallpaper && state.clockVisible) {
+      clockContainer.classList.remove('hidden');
+    } else {
+      clockContainer.classList.add('hidden');
+    }
+    clockToggle.checked = state.clockVisible;
+  }
+
+  function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function applyClockColor() {
+    let bg, border;
+    if (state.clockColor === 'custom') {
+      bg     = hexToRgba(state.clockCustomHex, 0.18);
+      border = hexToRgba(state.clockCustomHex, 0.4);
+      clockCustomInput.closest('.custom-swatch').style.background = hexToRgba(state.clockCustomHex, 0.7);
+    } else {
+      const c = CLOCK_COLORS[state.clockColor] || CLOCK_COLORS.white;
+      bg = c.bg; border = c.border;
+    }
+    clockContainer.style.background  = bg;
+    clockContainer.style.borderColor = border;
+    clockSwatches.forEach(s => s.classList.toggle('active', s.dataset.color === state.clockColor));
+  }
 
   // ── Background rendering ───────────────────────────────────────────────────
   function renderBg(objectUrl) {
@@ -67,7 +114,8 @@
       bg.style.backgroundImage = '';
       bg.classList.remove('loaded');
       setupPrompt.classList.remove('hidden');
-      clockContainer.classList.add('hidden');
+      hasWallpaper = false;
+      applyClockVisibility();
       clearBtn.disabled = true;
       return;
     }
@@ -78,7 +126,8 @@
     bg.style.backgroundRepeat = state.tile ? 'repeat' : 'no-repeat';
     bg.classList.add('loaded');
     setupPrompt.classList.add('hidden');
-    clockContainer.classList.remove('hidden');
+    hasWallpaper = true;
+    applyClockVisibility();
     clearBtn.disabled = false;
   }
 
@@ -96,17 +145,28 @@
   }
 
   function persistSettings() {
-    chrome.storage.local.set({ wallpaperFit: state.fit, wallpaperTile: state.tile });
+    chrome.storage.local.set({
+      wallpaperFit: state.fit,
+      wallpaperTile: state.tile,
+      clockVisible: state.clockVisible,
+      clockColor: state.clockColor,
+      clockCustomHex: state.clockCustomHex,
+    });
   }
 
   // ── Load on startup ────────────────────────────────────────────────────────
   async function init() {
     const stored = await new Promise(resolve =>
-      chrome.storage.local.get(['wallpaperFit', 'wallpaperTile', 'wallpaperDataUrl'], resolve)
+      chrome.storage.local.get(['wallpaperFit', 'wallpaperTile', 'wallpaperDataUrl', 'clockVisible', 'clockColor', 'clockCustomHex'], resolve)
     );
 
-    state.fit  = stored.wallpaperFit  || 'cover';
-    state.tile = !!stored.wallpaperTile;
+    state.fit          = stored.wallpaperFit  || 'cover';
+    state.tile         = !!stored.wallpaperTile;
+    state.clockVisible   = stored.clockVisible !== false; // default true
+    state.clockColor     = stored.clockColor   || 'white';
+    state.clockCustomHex = stored.clockCustomHex || '#6366f1';
+    clockCustomInput.value = state.clockCustomHex;
+    applyClockColor();
 
     let blob = null;
 
@@ -175,6 +235,28 @@
     dropZone.classList.remove('drag-over');
     const file = e.dataTransfer?.files?.[0];
     if (file) handleFile(file);
+  });
+
+  // ── Clock toggle ───────────────────────────────────────────────────────────
+  clockToggle.addEventListener('change', () => {
+    state.clockVisible = clockToggle.checked;
+    applyClockVisibility();
+    persistSettings();
+  });
+
+  // ── Clock color ────────────────────────────────────────────────────────────
+  clockSwatches.forEach(swatch => swatch.addEventListener('click', () => {
+    state.clockColor = swatch.dataset.color;
+    if (state.clockColor === 'custom') clockCustomInput.click();
+    applyClockColor();
+    persistSettings();
+  }));
+
+  clockCustomInput.addEventListener('input', () => {
+    state.clockColor     = 'custom';
+    state.clockCustomHex = clockCustomInput.value;
+    applyClockColor();
+    persistSettings();
   });
 
   // ── Fit change ─────────────────────────────────────────────────────────────

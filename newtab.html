@@ -407,6 +407,103 @@
       transform: translateY(0);
     }
 
+    /* ── Toggle ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.2rem 0;
+    }
+
+    .toggle-label {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .toggle {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .toggle input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-thumb {
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .toggle-thumb::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.6);
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .toggle input:checked + .toggle-thumb {
+      background: rgba(108, 99, 255, 0.7);
+      border-color: rgba(108, 99, 255, 0.5);
+    }
+
+    .toggle input:checked + .toggle-thumb::after {
+      transform: translateX(16px);
+      background: white;
+    }
+
+    /* ── Color swatches ── */
+    .swatch-grid {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+
+    .color-swatch:hover { transform: scale(1.12); }
+
+    .color-swatch.active {
+      border-color: white;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+    }
+
+    .custom-swatch {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+    }
+
+    .custom-swatch input[type="color"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
     /* ── Utilities ── */
     .hidden { display: none !important; }
   </style>
@@ -477,6 +574,31 @@
             <input type="radio" name="fit" id="fit-tile" value="auto">
             <label for="fit-tile"><div class="fit-icon tile"></div>Tile</label>
           </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Clock</div>
+        <div class="toggle-row">
+          <span class="toggle-label">Show clock</span>
+          <label class="toggle">
+            <input type="checkbox" id="clock-toggle" checked>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+        <div class="section-label" style="margin-top: 0.85rem;">Glass color</div>
+        <div class="swatch-grid" id="clock-color-swatches">
+          <button class="color-swatch active" data-color="white"  style="background: rgba(210,215,230,0.55);" title="White"></button>
+          <button class="color-swatch"        data-color="black"  style="background: rgba(0,0,0,0.7);"       title="Black"></button>
+          <button class="color-swatch"        data-color="blue"   style="background: rgba(59,130,246,0.75);"  title="Blue"></button>
+          <button class="color-swatch"        data-color="purple" style="background: rgba(139,92,246,0.75);"  title="Purple"></button>
+          <button class="color-swatch"        data-color="rose"   style="background: rgba(244,63,94,0.7);"    title="Rose"></button>
+          <button class="color-swatch"        data-color="amber"  style="background: rgba(245,158,11,0.7);"   title="Amber"></button>
+          <button class="color-swatch"        data-color="green"  style="background: rgba(34,197,94,0.7);"    title="Green"></button>
+          <label  class="color-swatch custom-swatch" data-color="custom" title="Custom color">
+            <input type="color" id="clock-color-custom" tabindex="-1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </label>
         </div>
       </div>
 
